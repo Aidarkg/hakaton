@@ -27,10 +27,16 @@ class RecordSpeechAPIView(APIView):
             except Exception as e:
                 return Response({'Ошибка': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         elif 'video' in request.FILES:
-            video_file = request.FILES['video'].name
-            clip = VideoFileClip(video_file)
+            video_file = request.FILES['video']
+            video_filename = request.FILES['video'].name
+            video_file_path = 'media/' + video_filename
+            with open(f'{video_file_path}', 'wb') as destination:
+                for chunk in video_file.chunks():
+                    destination.write(chunk)
+
+            clip = VideoFileClip(video_file_path)
             audio_file = clip.audio
-            video_filename = video_file.split('.')[0]
+            video_filename = video_filename.split('.')[0]
             audio_filename = f'media/{video_filename}.mp3'
             audio_file.write_audiofile(audio_filename)
             
@@ -45,5 +51,7 @@ class RecordSpeechAPIView(APIView):
             except Exception as e:
                 return Response({'Ошибка': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             finally:
-                # Удаляем временный файл аудио после использования
+                clip.close()
+                audio_file.close()
                 os.remove(audio_filename)
+                os.remove(video_file_path)
